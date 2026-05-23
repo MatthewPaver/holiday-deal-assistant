@@ -31,6 +31,7 @@ import './App.css'
 type Board = 'All inclusive' | 'Full board' | 'Half board' | 'Breakfast' | 'Room only'
 type TripType = 'Package' | 'DIY bundle'
 type Vibe = 'Couples' | 'Quiet' | 'Party' | 'Families' | 'Beach' | 'Food' | 'Culture' | 'Luxury'
+type SortMode = 'Best fit' | 'Lowest total' | 'Lowest per person' | 'Highest rating' | 'Shortest transfer'
 
 type Offer = {
   id: string
@@ -263,6 +264,10 @@ const offers: Offer[] = [
 ]
 
 const airportOptions = ['Any UK', 'Manchester', 'London Stansted', 'Birmingham', 'London Gatwick']
+const destinationOptions = ['Anywhere', ...Array.from(new Set(offers.map((offer) => offer.destination)))]
+const boardOptions: Array<Board | 'Any board'> = ['Any board', 'All inclusive', 'Full board', 'Half board', 'Breakfast', 'Room only']
+const tripTypeOptions: Array<TripType | 'Any type'> = ['Any type', 'Package', 'DIY bundle']
+const sortOptions: SortMode[] = ['Best fit', 'Lowest total', 'Lowest per person', 'Highest rating', 'Shortest transfer']
 const vibeOptions: Vibe[] = ['Couples', 'Quiet', 'Beach', 'Food', 'Culture', 'Party', 'Families', 'Luxury']
 
 const repoLessons = [
@@ -288,6 +293,33 @@ const sourceConnectors = [
   { name: 'Hotels', target: 'Booking.com Demand, Expedia Rapid, LiteAPI', status: 'API-first', risk: 'Normalise taxes and property fees' },
   { name: 'Transfers', target: 'Hotelbeds Transfers or distance estimate', status: 'Quote enrich', risk: 'Pickup rules differ by hotel' },
   { name: 'Reviews', target: 'Provider reviews plus Places metadata', status: 'Evidence layer', risk: 'Do not overclaim from limited samples' },
+]
+
+const competitorInsights = [
+  {
+    name: 'Skyscanner Packages',
+    strength: 'Huge package search reach and trusted redirects',
+    gap: 'Inclusions depend on provider, so transfer/food/bag truth is still left to the traveller',
+    response: 'Show confirmed vs estimated extras before redirect',
+  },
+  {
+    name: 'TravelSupermarket',
+    strength: 'Familiar filters for board, price, brand, luggage, transfers and ATOL confidence',
+    gap: 'Comparison still leans on headline deal rows rather than persona-specific suitability',
+    response: 'Rank by couple/family/party fit and explain the trade-off',
+  },
+  {
+    name: 'Expedia',
+    strength: 'Bundle & Save, package customisation and one-account trip management',
+    gap: 'Enterprise-grade bundling does not automatically explain whether DIY beats all-inclusive',
+    response: 'Compare package vs DIY with per-person and total-trip economics',
+  },
+  {
+    name: 'KAYAK',
+    strength: 'Fast metasearch and broad filters across flights, hotels and cars',
+    gap: 'Powerful search, but weaker holiday-context reasoning',
+    response: 'Add area intelligence, review patterns and source confidence',
+  },
 ]
 
 function currency(value: number) {
@@ -343,6 +375,12 @@ function getVerdict(score: number) {
 function App() {
   const [budget, setBudget] = useState(1300)
   const [airport, setAirport] = useState('Any UK')
+  const [destination, setDestination] = useState('Anywhere')
+  const [board, setBoard] = useState<Board | 'Any board'>('Any board')
+  const [tripType, setTripType] = useState<TripType | 'Any type'>('Any type')
+  const [minRating, setMinRating] = useState(3.8)
+  const [maxTransfer, setMaxTransfer] = useState(120)
+  const [sortMode, setSortMode] = useState<SortMode>('Best fit')
   const [bagsNeeded, setBagsNeeded] = useState(true)
   const [transferNeeded, setTransferNeeded] = useState(true)
   const [selectedVibes, setSelectedVibes] = useState<Vibe[]>(['Couples', 'Beach', 'Food'])
@@ -352,14 +390,26 @@ function App() {
   const rankedOffers = useMemo(() => {
     return offers
       .filter((offer) => airport === 'Any UK' || offer.departureAirport === airport)
+      .filter((offer) => destination === 'Anywhere' || offer.destination === destination)
+      .filter((offer) => board === 'Any board' || offer.board === board)
+      .filter((offer) => tripType === 'Any type' || offer.tripType === tripType)
+      .filter((offer) => offer.rating >= minRating)
+      .filter((offer) => offer.transferMinutes <= maxTransfer)
       .map((offer) => {
         const trueTotal = getTrueTotal(offer, bagsNeeded, transferNeeded)
         const scoreParts = getScoreParts(offer, selectedVibes, budget, trueTotal)
         const fitScore = getFitScore(scoreParts)
-        return { ...offer, trueTotal, scoreParts, fitScore, verdict: getVerdict(fitScore) }
+        const perPerson = Math.round(trueTotal / 2)
+        return { ...offer, trueTotal, perPerson, scoreParts, fitScore, verdict: getVerdict(fitScore) }
       })
-      .sort((a, b) => b.fitScore - a.fitScore)
-  }, [airport, bagsNeeded, budget, selectedVibes, transferNeeded])
+      .sort((a, b) => {
+        if (sortMode === 'Lowest total') return a.trueTotal - b.trueTotal
+        if (sortMode === 'Lowest per person') return a.perPerson - b.perPerson
+        if (sortMode === 'Highest rating') return b.rating - a.rating
+        if (sortMode === 'Shortest transfer') return a.transferMinutes - b.transferMinutes
+        return b.fitScore - a.fitScore
+      })
+  }, [airport, bagsNeeded, board, budget, destination, maxTransfer, minRating, selectedVibes, sortMode, transferNeeded, tripType])
 
   const activeOffer = rankedOffers.find((offer) => offer.id === activeOfferId) ?? rankedOffers[0]
   const bestOffer = rankedOffers[0]
@@ -448,6 +498,11 @@ function App() {
           <span>Deal radar</span>
           <strong>Surface confidence, not fake certainty</strong>
         </div>
+        <div>
+          <CircleGauge size={18} />
+          <span>Enterprise controls</span>
+          <strong>Policy, audit trail, supplier SLAs</strong>
+        </div>
       </section>
 
       <div className="workspace">
@@ -477,6 +532,70 @@ function App() {
                 <option key={option}>{option}</option>
               ))}
             </select>
+          </label>
+
+          <div className="filter-grid">
+            <label className="field compact">
+              <span>Destination</span>
+              <select value={destination} onChange={(event) => setDestination(event.target.value)}>
+                {destinationOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="field compact">
+              <span>Board basis</span>
+              <select value={board} onChange={(event) => setBoard(event.target.value as Board | 'Any board')}>
+                {boardOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="field compact">
+              <span>Holiday type</span>
+              <select value={tripType} onChange={(event) => setTripType(event.target.value as TripType | 'Any type')}>
+                {tripTypeOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="field compact">
+              <span>Sort by</span>
+              <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}>
+                {sortOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <label className="field">
+            <span>Minimum rating</span>
+            <strong>{minRating.toFixed(1)}+</strong>
+            <input
+              type="range"
+              min="3.5"
+              max="4.8"
+              step="0.1"
+              value={minRating}
+              onChange={(event) => setMinRating(Number(event.target.value))}
+            />
+          </label>
+
+          <label className="field">
+            <span>Max transfer time</span>
+            <strong>{maxTransfer} min</strong>
+            <input
+              type="range"
+              min="20"
+              max="120"
+              step="5"
+              value={maxTransfer}
+              onChange={(event) => setMaxTransfer(Number(event.target.value))}
+            />
           </label>
 
           <div className="switch-row">
@@ -568,6 +687,10 @@ function App() {
               <strong>{bestOffer ? currency(bestOffer.trueTotal) : 'None'}</strong>
             </div>
             <div>
+              <span>Best per person</span>
+              <strong>{bestOffer ? currency(bestOffer.perPerson) : 'None'}</strong>
+            </div>
+            <div>
               <span>Package average</span>
               <strong>{currency(packageAverage || 0)}</strong>
             </div>
@@ -614,6 +737,10 @@ function App() {
                     <div>
                       <span>True total</span>
                       <strong>{currency(offer.trueTotal)}</strong>
+                    </div>
+                    <div>
+                      <span>Per person</span>
+                      <strong>{currency(offer.perPerson)}</strong>
                     </div>
                     <div>
                       <span>Rating</span>
@@ -671,6 +798,14 @@ function App() {
             <div className="total-line">
               <span>Estimated total</span>
               <strong>{currency(activeOffer.trueTotal)}</strong>
+            </div>
+            <div className="per-person-line">
+              <span>Per person</span>
+              <strong>{currency(activeOffer.perPerson)}</strong>
+            </div>
+            <div>
+              <span>Extras per person</span>
+              <strong>{currency(Math.round(hiddenCostDelta / 2))}</strong>
             </div>
           </div>
 
@@ -770,6 +905,23 @@ function App() {
       </section>
 
       <section className="robustness-board" aria-label="Robustness plan">
+        <div className="board-column competitor-column">
+          <p className="eyebrow">Market comparison</p>
+          <h2>Enterprise wedge</h2>
+          {competitorInsights.map((competitor) => (
+            <article key={competitor.name}>
+              <div>
+                <strong>{competitor.name}</strong>
+                <span>{competitor.strength}</span>
+              </div>
+              <em>Gap</em>
+              <p>{competitor.gap}</p>
+              <p>
+                <strong>Our response:</strong> {competitor.response}
+              </p>
+            </article>
+          ))}
+        </div>
         <div className="board-column">
           <p className="eyebrow">Connector matrix</p>
           <h2>Source plan</h2>
@@ -795,6 +947,22 @@ function App() {
               </div>
               <em>Applied</em>
               <p>{lesson.applied}</p>
+            </article>
+          ))}
+        </div>
+        <div className="board-column">
+          <p className="eyebrow">Competitor read</p>
+          <h2>How this differs</h2>
+          {competitorInsights.map((insight) => (
+            <article key={insight.name}>
+              <div>
+                <strong>{insight.name}</strong>
+                <span>{insight.strength}</span>
+              </div>
+              <em>Gap</em>
+              <p>
+                {insight.gap}. {insight.response}.
+              </p>
             </article>
           ))}
         </div>
