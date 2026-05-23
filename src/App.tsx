@@ -950,22 +950,6 @@ function App() {
             </article>
           ))}
         </div>
-        <div className="board-column">
-          <p className="eyebrow">Competitor read</p>
-          <h2>How this differs</h2>
-          {competitorInsights.map((insight) => (
-            <article key={insight.name}>
-              <div>
-                <strong>{insight.name}</strong>
-                <span>{insight.strength}</span>
-              </div>
-              <em>Gap</em>
-              <p>
-                {insight.gap}. {insight.response}.
-              </p>
-            </article>
-          ))}
-        </div>
       </section>
     </main>
   )

@@ -126,7 +126,7 @@ button {
 
 .source-health {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   border-bottom: 1px solid var(--line);
   background: rgba(22, 33, 31, 0.92);
 }
@@ -203,6 +203,17 @@ button {
 .field {
   display: grid;
   gap: 10px;
+  margin-bottom: 22px;
+}
+
+.field.compact {
+  margin-bottom: 0;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
   margin-bottom: 22px;
 }
 
@@ -354,7 +365,7 @@ select {
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
   margin-bottom: 18px;
   overflow: hidden;
@@ -476,7 +487,7 @@ select {
 
 .price-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -597,6 +608,15 @@ select {
 
 .cost-stack .total-line span {
   color: rgba(255, 255, 255, 0.72);
+}
+
+.cost-stack .per-person-line {
+  background: rgba(31, 122, 140, 0.1);
+}
+
+.cost-stack .per-person-line strong {
+  color: var(--teal);
+  font-size: 20px;
 }
 
 .score-breakdown,
@@ -793,6 +813,10 @@ select {
   grid-column: 1 / -1;
 }
 
+.competitor-column article {
+  grid-template-columns: minmax(0, 1fr) 48px;
+}
+
 .empty-state {
   min-height: 100svh;
   display: grid;
@@ -831,6 +855,10 @@ select {
   .robustness-board,
   .price-row,
   .evidence-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-grid {
     grid-template-columns: 1fr;
   }
 
