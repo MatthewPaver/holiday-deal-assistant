@@ -598,22 +598,33 @@ function App() {
             />
           </label>
 
-          <div className="switch-row">
-            <button className={bagsNeeded ? 'toggle active' : 'toggle'} type="button" onClick={() => setBagsNeeded(true)}>
+          <div className="switch-row" role="group" aria-label="Baggage preference">
+            <button
+              className={bagsNeeded ? 'toggle active' : 'toggle'}
+              type="button"
+              onClick={() => setBagsNeeded(true)}
+              aria-pressed={bagsNeeded}
+            >
               <Luggage size={17} />
               Hold bags
             </button>
-            <button className={!bagsNeeded ? 'toggle active' : 'toggle'} type="button" onClick={() => setBagsNeeded(false)}>
+            <button
+              className={!bagsNeeded ? 'toggle active' : 'toggle'}
+              type="button"
+              onClick={() => setBagsNeeded(false)}
+              aria-pressed={!bagsNeeded}
+            >
               <Check size={17} />
               Cabin only
             </button>
           </div>
 
-          <div className="switch-row">
+          <div className="switch-row" role="group" aria-label="Transfer preference">
             <button
               className={transferNeeded ? 'toggle active' : 'toggle'}
               type="button"
               onClick={() => setTransferNeeded(true)}
+              aria-pressed={transferNeeded}
             >
               <TrainFront size={17} />
               Include transfer
@@ -622,14 +633,15 @@ function App() {
               className={!transferNeeded ? 'toggle active' : 'toggle'}
               type="button"
               onClick={() => setTransferNeeded(false)}
+              aria-pressed={!transferNeeded}
             >
               <MapPin size={17} />
               Self-sort
             </button>
           </div>
 
-          <div className="vibe-picker">
-            <span>Vibe fit</span>
+          <div className="vibe-picker" role="group" aria-labelledby="vibe-picker-label">
+            <span id="vibe-picker-label">Vibe fit</span>
             <div>
               {vibeOptions.map((vibe) => (
                 <button
@@ -637,6 +649,7 @@ function App() {
                   key={vibe}
                   type="button"
                   onClick={() => toggleVibe(vibe)}
+                  aria-pressed={selectedVibes.includes(vibe)}
                 >
                   {vibe}
                 </button>
@@ -822,7 +835,7 @@ function App() {
             ).map(([label, value]) => (
               <div className="score-line" key={label}>
                 <span>{label}</span>
-                <meter min={-24} max={32} low={-8} high={18} optimum={28} value={value} />
+                <meter aria-label={label} min={-24} max={32} low={-8} high={18} optimum={28} value={value} />
                 <strong>{Number(value) > 0 ? `+${value}` : value}</strong>
               </div>
             ))}
